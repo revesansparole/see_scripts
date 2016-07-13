@@ -123,7 +123,7 @@ def extract_nodes(session, pm, store):
                         idef = find_wralea_interface(store, iname)
                         if idef is None:
                             # try to find its definition online
-                            query = {'type': 'interface', 'title': iname}
+                            query = {'type': 'interface', 'name': iname}
                             res = session.get(seeweb_search,
                                               params=query).json()
                             if len(res) != 1:
@@ -172,7 +172,7 @@ def extract_workflows(session, pm, store):
                         if ndef is None:
                             # try to find its definition online
                             nname = "%s: %s" % func_desc
-                            query = {'type': 'workflow_node', 'title': nname}
+                            query = {'type': 'workflow_node', 'name': nname}
                             res = session.get(seeweb_search,
                                               params=query).json()
                             if len(res) != 1:
