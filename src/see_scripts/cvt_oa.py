@@ -12,6 +12,7 @@ from zipfile import ZipFile
 from openalea.core.compositenode import CompositeNodeFactory
 from openalea.core.interface import IInterface
 from openalea.core.node import NodeFactory
+from openalea.core.pm_extend import composites, get_packages, nodes
 from openalea.core.pkgmanager import PackageManager
 from openalea.wlformat.convert.wralea import (find_wralea_interface,
                                               find_wralea_node,
@@ -101,50 +102,63 @@ def extract_nodes(session, pm, store):
         (list): a list of created ROWorkflowNode objects
     """
     ros = []
-    for pkgname in pm.keys():
-        if not pkgname.startswith('#'):
-            for name in pm[pkgname].keys():
-                nf = pm[pkgname][name]
-                if isinstance(nf, NodeFactory):
-                    print("exporting node: %s %s" % (pkgname, name))
-                    # find all interface used by the node
-                    if nf.inputs is None:
-                        nf.inputs = []
-                    if nf.outputs is None:
-                        nf.outputs = []
+    for nf in nodes(pm):
+        print("exporting node: %s %s" % (nf.package.name, nf.name))
+        if nf.inputs is None:
+            nf.inputs = []
+        if nf.outputs is None:
+            nf.outputs = []
 
-                    for port in chain(nf.inputs, nf.outputs):
-                        if port.get('interface') is None:
-                            port['interface'] = "any"
+        # check that all port names are unique
+        for i, port in enumerate(nf.inputs):
+            if 'name' not in port:
+                port['name'] = 'in%d' % i
 
-                        iname = str(port['interface'])
-                        if "(" in iname:
-                            iname = iname.split("(")[0].strip()
-                            port['interface'] = iname
+        pnames = set(port['name'] for port in nf.inputs)
+        if len(pnames) < len(nf.inputs):
+            raise UserWarning("input names are not unique")
 
-                        idef = find_wralea_interface(store, iname)
-                        if idef is None:
-                            # try to find its definition online
-                            query = {'type': 'interface', 'name': iname}
-                            res = session.get(seeweb_search,
-                                              params=query).json()
-                            if len(res) != 1:
-                                msg = "Interface '%s' used by node '%s:%s' is not defined anywhere" % (
-                                iname, pkgname, name)
-                                raise UserWarning(msg)
-                            else:
-                                query = dict(uid=res[0])
-                                idef = session.get(seeweb_search,
-                                                   params=query).json()
+        for i, port in enumerate(nf.outputs):
+            if 'name' not in port:
+                port['name'] = 'out%d' % i
 
-                                store[idef['id']] = ('data', idef)
+        pnames = set(port['name'] for port in nf.outputs)
+        if len(pnames) < len(nf.outputs):
+            raise UserWarning("input names are not unique")
 
-                    # convert it to wlformat
-                    ndef = import_node(nf, store, pkgname)
-                    store[ndef['id']] = ("node", ndef)
+        # find all interface used by the node
+        for port in chain(nf.inputs, nf.outputs):
+            if port.get('interface') is None:
+                port['interface'] = "any"
 
-                    # add node to ro list
-                    ros.append(('workflow_node', ndef))
+            iname = str(port['interface'])
+            if "(" in iname:
+                iname = iname.split("(")[0].strip()
+                port['interface'] = iname
+
+            idef = find_wralea_interface(store, iname)
+            if idef is None:
+                # try to find its definition online
+                query = {'type': 'interface', 'name': iname}
+                res = session.get(seeweb_search,
+                                  params=query).json()
+                if len(res) != 1:
+                    msg = "Interface '%s' used by node '%s:%s' is not defined anywhere" % (
+                    iname, nf.package.name, nf.name)
+                    raise UserWarning(msg)
+                else:
+                    query = dict(uid=res[0])
+                    idef = session.get(seeweb_search,
+                                       params=query).json()
+
+                    store[idef['id']] = ('data', idef)
+
+        # convert it to wlformat
+        ndef = import_node(nf, store, nf.package.name)
+        store[ndef['id']] = ("node", ndef)
+
+        # add node to ro list
+        ros.append(('workflow_node', ndef))
 
     return ros
 
@@ -163,38 +177,34 @@ def extract_workflows(session, pm, store):
         (list): a list of created ROWorkflow objects
     """
     ros = []
-    for pkgname in pm.keys():
-        if not pkgname.startswith('#'):
-            for name in pm[pkgname].keys():
-                cnf = pm[pkgname][name]
-                if isinstance(cnf, CompositeNodeFactory):
-                    print("exporting workflow: %s %s" % (pkgname, name))
-                    # ensure all nodes used by this workflow are in store
-                    for nid, func_desc in cnf.elt_factory.items():
-                        ndef = find_wralea_node(store, func_desc)
-                        if ndef is None:
-                            # try to find its definition online
-                            nname = "%s: %s" % func_desc
-                            query = {'type': 'workflow_node', 'name': nname}
-                            res = session.get(seeweb_search,
-                                              params=query).json()
-                            if len(res) != 1:
-                                msg = "Node '%s' used by workflow '%s' is not defined anywhere" % (
-                                    nname, name)
-                                raise UserWarning(msg)
-                            else:
-                                query = dict(uid=res[0])
-                                ndef = session.get(seeweb_search,
-                                                   params=query).json()
+    for cnf in composites(pm):
+        print("exporting workflow: %s %s" % (cnf.package.name, cnf.name))
+        # ensure all nodes used by this workflow are in store
+        for nid, func_desc in cnf.elt_factory.items():
+            ndef = find_wralea_node(store, func_desc)
+            if ndef is None:
+                # try to find its definition online
+                nname = "%s: %s" % func_desc
+                query = {'type': 'workflow_node', 'name': nname}
+                res = session.get(seeweb_search,
+                                  params=query).json()
+                if len(res) != 1:
+                    msg = "Node '%s' used by workflow '%s' is not defined anywhere" % (
+                        nname, cnf.name)
+                    raise UserWarning(msg)
+                else:
+                    query = dict(uid=res[0])
+                    ndef = session.get(seeweb_search,
+                                       params=query).json()
 
-                                store[ndef['id']] = ('node', ndef)
+                    store[ndef['id']] = ('node', ndef)
 
-                    # import workflow
-                    wdef = import_workflow(cnf, store)
-                    if wdef is not None:
-                        store[wdef['id']] = ("workflow", wdef)
-                        # add node to ro list
-                        ros.append(('workflow', wdef))
+        # import workflow
+        wdef = import_workflow(cnf, store)
+        if wdef is not None:
+            store[wdef['id']] = ("workflow", wdef)
+            # add node to ro list
+            ros.append(('workflow', wdef))
 
     return ros
 
