@@ -74,13 +74,14 @@ def extract_interfaces(session, pm, store):
     del session
 
     ros = []
-    for key in pm.keys():
-        if not key.startswith('#'):
-            for name in pm[key].keys():
-                ii = pm[key][name]
+    for pkgname in pm.keys():
+        if not pkgname.startswith('#'):
+            for name in pm[pkgname].keys():
+                ii = pm[pkgname][name]
                 if isinstance(ii, IInterface):
+                    print("exporting interface: %s %s" % (pkgname, name))
                     idef = register_wralea_interface(name, "unknown")
-                    store[(key, name)] = idef
+                    store[(pkgname, name)] = idef
                     ros.append(('interface', idef))
 
     return ros
@@ -105,6 +106,7 @@ def extract_nodes(session, pm, store):
             for name in pm[pkgname].keys():
                 nf = pm[pkgname][name]
                 if isinstance(nf, NodeFactory):
+                    print("exporting node: %s %s" % (pkgname, name))
                     # find all interface used by the node
                     if nf.inputs is None:
                         nf.inputs = []
@@ -166,6 +168,7 @@ def extract_workflows(session, pm, store):
             for name in pm[pkgname].keys():
                 cnf = pm[pkgname][name]
                 if isinstance(cnf, CompositeNodeFactory):
+                    print("exporting workflow: %s %s" % (pkgname, name))
                     # ensure all nodes used by this workflow are in store
                     for nid, func_desc in cnf.elt_factory.items():
                         ndef = find_wralea_node(store, func_desc)
@@ -188,9 +191,10 @@ def extract_workflows(session, pm, store):
 
                     # import workflow
                     wdef = import_workflow(cnf, store)
-                    store[wdef['id']] = ("workflow", wdef)
-                    # add node to ro list
-                    ros.append(('workflow', wdef))
+                    if wdef is not None:
+                        store[wdef['id']] = ("workflow", wdef)
+                        # add node to ro list
+                        ros.append(('workflow', wdef))
 
     return ros
 
