@@ -243,6 +243,11 @@ def main():
         uid = register_ro(session, 'workflow_node', ndef)
         connect(session, pkg, uid, 'contains')
 
+    # register workflows
+    for wdef in rows:
+        uid = register_ro(session, 'workflow', wdef)
+        connect(session, pkg, uid, 'contains')
+
 
 
 if __name__ == '__main__':
