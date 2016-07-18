@@ -20,7 +20,8 @@ from openalea.wlformat.convert.wralea import (find_wralea_interface,
                                               import_workflow,
                                               register_wralea_interface)
 
-from .see_client import get_by_name, get_ro_def, log_to_see, upload_file
+from .see_client import (connect, get_by_name, get_ro_def,
+                         log_to_see, register_ro)
 
 
 def oa_pm(root):
@@ -63,7 +64,7 @@ def extract_interfaces(session, pm, store):
                     print("exporting interface: %s %s" % (pkgname, name))
                     idef = register_wralea_interface(name, "unknown")
                     store[(pkgname, name)] = idef
-                    ros.append(('interface', idef))
+                    ros.append(idef)
 
     return ros
 
@@ -136,7 +137,7 @@ def extract_nodes(session, pm, store):
         store[ndef['id']] = ("node", ndef)
 
         # add node to ro list
-        ros.append(('workflow_node', ndef))
+        ros.append(ndef)
 
     return ros
 
@@ -178,7 +179,7 @@ def extract_workflows(session, pm, store):
         if wdef is not None:
             store[wdef['id']] = ("workflow", wdef)
             # add node to ro list
-            ros.append(('workflow', wdef))
+            ros.append(wdef)
 
     return ros
 
@@ -218,16 +219,30 @@ def main():
 
     pm = oa_pm(root_pth)
     store = {}
-    ros = extract_interfaces(session, pm, store)
-    ros.extend(extract_nodes(session, pm, store))
-    ros.extend(extract_workflows(session, pm, store))
+    rois = extract_interfaces(session, pm, store)
+    rons = extract_nodes(session, pm, store)
+    rows = extract_workflows(session, pm, store)
 
-    pkg_arch = "%s.zip" % pkgname
-    write_package(ros, pkg_arch)
-    upload_file(session, pkg_arch)
+    # pkg_arch = "%s.zip" % pkgname
+    # write_package(ros, pkg_arch)
+    # upload_file(session, pkg_arch)
+    #
+    # if os.path.exists(pkg_arch):
+    #     os.remove(pkg_arch)
 
-    if os.path.exists(pkg_arch):
-        os.remove(pkg_arch)
+    # register container
+    pkg = register_ro(session, 'container', dict(name=pkgname))
+
+    # register interfaces
+    for idef in rois:
+        uid = register_ro(session, 'interface', idef)
+        connect(session, pkg, uid, 'contains')
+
+    # register nodes
+    for ndef in rons:
+        uid = register_ro(session, 'workflow_node', ndef)
+        connect(session, pkg, uid, 'contains')
+
 
 
 if __name__ == '__main__':

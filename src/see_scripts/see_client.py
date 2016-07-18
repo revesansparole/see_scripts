@@ -1,6 +1,7 @@
 """Set of python functions to interact with the SEEweb platform.
 """
 
+import json
 import requests
 
 seeweb_connect = "http://127.0.0.1:6543/rest/ro/connect"
@@ -90,8 +91,8 @@ def register_ro(session, ro_type, ro_def):
     Returns:
         (str): id of registered RO
     """
-    data = dict(ro_def)
-    data["ro_type"] = ro_type
+    data = dict(ro_type=ro_type,
+                ro_def=json.dumps(ro_def))
 
     res = session.post(seeweb_register, data=data)
     if res.status_code != 200:
@@ -111,7 +112,7 @@ def remove_ro(session, uid, recursive):
     Returns:
         None
     """
-    data = dict(uid=uid, recursive=recursive)
+    data = dict(uid=uid, recursive=json.dumps(recursive))
 
     res = session.post(seeweb_remove, data=data)
     if res.status_code != 200:
