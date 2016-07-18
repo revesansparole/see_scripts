@@ -3,15 +3,10 @@ RO definition files for each Openalea workflow object encountered
 """
 
 from itertools import chain
-import json
 import os
-import requests
 from sys import argv
-from zipfile import ZipFile
 
-from openalea.core.compositenode import CompositeNodeFactory
 from openalea.core.interface import IInterface
-from openalea.core.node import NodeFactory
 from openalea.core.pm_extend import composites, get_packages, nodes
 from openalea.core.pkgmanager import PackageManager
 from openalea.wlformat.convert.wralea import (find_wralea_interface,
@@ -184,22 +179,6 @@ def extract_workflows(session, pm, store):
     return ros
 
 
-def write_package(ros, pth):
-    """Write all ROs in list in a zip file
-
-    Args:
-        ros (list):
-        pth (str): path to created file
-
-    Returns:
-        None
-    """
-    with ZipFile(pth, 'w') as fz:
-        for ro_type, ro in ros:
-            ro['type'] = ro_type
-            fz.writestr("%s.wkf" % ro['id'], json.dumps(ro))
-
-
 def main():
     """Analyse arborescence content and extract all openalea objects
     """
@@ -223,13 +202,6 @@ def main():
     rons = extract_nodes(session, pm, store)
     rows = extract_workflows(session, pm, store)
 
-    # pkg_arch = "%s.zip" % pkgname
-    # write_package(ros, pkg_arch)
-    # upload_file(session, pkg_arch)
-    #
-    # if os.path.exists(pkg_arch):
-    #     os.remove(pkg_arch)
-
     # register container
     pkg = register_ro(session, 'container', dict(name=pkgname))
 
@@ -247,7 +219,6 @@ def main():
     for wdef in rows:
         uid = register_ro(session, 'workflow', wdef)
         connect(session, pkg, uid, 'contains')
-
 
 
 if __name__ == '__main__':
