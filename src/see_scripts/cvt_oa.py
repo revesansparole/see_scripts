@@ -20,27 +20,7 @@ from openalea.wlformat.convert.wralea import (find_wralea_interface,
                                               import_workflow,
                                               register_wralea_interface)
 
-seeweb_search = "http://127.0.0.1:6543/rest/ro/search"
-seeweb_upload = "http://127.0.0.1:6543/ro/create"
-
-
-def log_to_see(user, password):
-    """Try to log to SEEweb platform
-
-    Args:
-        user (str): user id
-        password (str): user password
-
-    Returns:
-        (Session): opened session if successful
-    """
-    session = requests.Session()
-    auth = {'ok': True, 'user_id': user, 'password': password}
-    res = session.post("http://127.0.0.1:6543/user_login", data=auth)
-    if res.status_code != 200:
-        raise UserWarning("unable to connect to SEEweb")
-
-    return session
+from .see_client import get_by_name, get_ro_def, log_to_see, upload_file
 
 
 def oa_pm(root):
@@ -139,18 +119,16 @@ def extract_nodes(session, pm, store):
             idef = find_wralea_interface(store, iname)
             if idef is None:
                 # try to find its definition online
-                query = {'type': 'interface', 'name': iname}
-                res = session.get(seeweb_search,
-                                  params=query).json()
+                res = get_by_name(session, 'interface', iname)
                 if len(res) != 1:
-                    msg = "Interface '%s' used by node '%s:%s' is not defined anywhere" % (
-                    iname, nf.package.name, nf.name)
+                    msg = ("Interface '%s' "
+                           "used by node '%s:%s' "
+                           "is not defined anywhere" % (iname,
+                                                        nf.package.name,
+                                                        nf.name))
                     raise UserWarning(msg)
                 else:
-                    query = dict(uid=res[0])
-                    idef = session.get(seeweb_search,
-                                       params=query).json()
-
+                    idef = get_ro_def(session, res[0])
                     store[idef['id']] = ('data', idef)
 
         # convert it to wlformat
@@ -185,18 +163,14 @@ def extract_workflows(session, pm, store):
             if ndef is None:
                 # try to find its definition online
                 nname = "%s: %s" % func_desc
-                query = {'type': 'workflow_node', 'name': nname}
-                res = session.get(seeweb_search,
-                                  params=query).json()
+                res = get_by_name(session, 'workflow_node', nname)
                 if len(res) != 1:
-                    msg = "Node '%s' used by workflow '%s' is not defined anywhere" % (
-                        nname, cnf.name)
+                    msg = ("Node '%s' "
+                           "used by workflow '%s' "
+                           "is not defined anywhere" % (nname, cnf.name))
                     raise UserWarning(msg)
                 else:
-                    query = dict(uid=res[0])
-                    ndef = session.get(seeweb_search,
-                                       params=query).json()
-
+                    ndef = get_ro_def(session, res[0])
                     store[ndef['id']] = ('node', ndef)
 
         # import workflow
@@ -225,24 +199,6 @@ def write_package(ros, pth):
             fz.writestr("%s.wkf" % ro['id'], json.dumps(ro))
 
 
-def upload_package(session, pth):
-    """Upload package on SEEweb
-
-    Args:
-        session (Session): previously opened session with SEEweb
-        pth (str): path to file
-
-    Returns:
-        None
-    """
-    data = {"submit_upload": True}
-    files = {'upload_file': open(pth, 'rb')}
-
-    res = session.post(seeweb_upload, data=data, files=files)
-    if res.status_code != 200:
-        raise UserWarning("unable to upload package on SEEweb")
-
-
 def main():
     """Analyse arborescence content and extract all openalea objects
     """
@@ -268,7 +224,7 @@ def main():
 
     pkg_arch = "%s.zip" % pkgname
     write_package(ros, pkg_arch)
-    upload_package(session, pkg_arch)
+    upload_file(session, pkg_arch)
 
     if os.path.exists(pkg_arch):
         os.remove(pkg_arch)
