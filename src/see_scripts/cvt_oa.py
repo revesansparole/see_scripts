@@ -9,11 +9,11 @@ from sys import argv
 from openalea.core.interface import IInterface
 from openalea.core.pm_extend import composites, get_packages, nodes
 from openalea.core.pkgmanager import PackageManager
-from openalea.wlformat.convert.wralea import (find_wralea_interface,
-                                              find_wralea_node,
-                                              import_node,
-                                              import_workflow,
-                                              register_wralea_interface)
+from openalea.wlformat.convert.wralea import (convert_node,
+                                              convert_workflow,
+                                              get_interface_by_name,
+                                              get_node_by_func_desc,
+                                              register_interface)
 
 from .see_client import (connect, get_by_name, get_ro_def,
                          log_to_see, register_ro)
@@ -57,8 +57,7 @@ def extract_interfaces(session, pm, store):
                 ii = pm[pkgname][name]
                 if isinstance(ii, IInterface):
                     print("exporting interface: %s %s" % (pkgname, name))
-                    idef = register_wralea_interface(name, "unknown")
-                    store[(pkgname, name)] = idef
+                    idef = register_interface(store, name, "unknown")
                     ros.append(idef)
 
     return ros
@@ -112,7 +111,7 @@ def extract_nodes(session, pm, store):
                 iname = iname.split("(")[0].strip()
                 port['interface'] = iname
 
-            idef = find_wralea_interface(store, iname)
+            idef = get_interface_by_name(store, iname)
             if idef is None:
                 # try to find its definition online
                 res = get_by_name(session, 'interface', iname)
@@ -128,7 +127,7 @@ def extract_nodes(session, pm, store):
                     store[idef['id']] = ('data', idef)
 
         # convert it to wlformat
-        ndef = import_node(nf, store, nf.package.name)
+        ndef = convert_node(nf, store, nf.package.name)
         store[ndef['id']] = ("node", ndef)
 
         # add node to ro list
@@ -155,7 +154,7 @@ def extract_workflows(session, pm, store):
         print("exporting workflow: %s %s" % (cnf.package.name, cnf.name))
         # ensure all nodes used by this workflow are in store
         for nid, func_desc in cnf.elt_factory.items():
-            ndef = find_wralea_node(store, func_desc)
+            ndef = get_node_by_func_desc(store, func_desc)
             if ndef is None:
                 # try to find its definition online
                 nname = "%s: %s" % func_desc
@@ -170,7 +169,7 @@ def extract_workflows(session, pm, store):
                     store[ndef['id']] = ('node', ndef)
 
         # import workflow
-        wdef = import_workflow(cnf, store)
+        wdef = convert_workflow(cnf, store)
         if wdef is not None:
             store[wdef['id']] = ("workflow", wdef)
             # add node to ro list
