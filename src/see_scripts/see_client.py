@@ -3,7 +3,8 @@
 
 import requests
 
-seeweb_link = "http://127.0.0.1:6543/rest/ro/link"
+seeweb_connect = "http://127.0.0.1:6543/rest/ro/connect"
+seeweb_disconnect = "http://127.0.0.1:6543/rest/ro/disconnect"
 seeweb_register = "http://127.0.0.1:6543/rest/ro/register"
 seeweb_remove = "http://127.0.0.1:6543/rest/ro/remove"
 seeweb_search = "http://127.0.0.1:6543/rest/ro/search"
@@ -119,7 +120,7 @@ def remove_ro(session, uid, recursive):
     return res.json()
 
 
-def link(session, src, tgt, link_type):
+def connect(session, src, tgt, link_type):
     """Register a link between two ROs
 
     Args:
@@ -133,7 +134,28 @@ def link(session, src, tgt, link_type):
     """
     data = dict(src=src, tgt=tgt, link_type=link_type)
 
-    res = session.post(seeweb_link, data=data)
+    res = session.post(seeweb_connect, data=data)
+    if res.status_code != 200:
+        raise UserWarning("unable to register RO on SEEweb")
+
+    return res.json()
+
+
+def disconnect(session, src, tgt, link_type):
+    """Remove a link between two ROs
+
+    Args:
+        session (Session): previously opened session with SEEweb
+        src (str): id of source RO
+        tgt (str): id of target RO
+        link_type (str): type of link to remove
+
+    Returns:
+        (int): id of removed link
+    """
+    data = dict(source=src, target=tgt, link_type=link_type)
+
+    res = session.post(seeweb_disconnect, data=data)
     if res.status_code != 200:
         raise UserWarning("unable to register RO on SEEweb")
 
