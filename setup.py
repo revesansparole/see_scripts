@@ -45,6 +45,7 @@ setup_kwds = dict(
 # change setup_kwds below before the next pkglts tag
 
 setup_kwds['entry_points']['console_scripts'] = ['cvtoa = see_scripts.cvt_oa:main']
+setup_kwds['entry_points']['wralea'] = ['see = see_scripts']
 
 # do not change things below
 # {# pkglts, pysetup.call

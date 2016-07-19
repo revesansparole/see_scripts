@@ -41,9 +41,9 @@ def get_ro_def(session, uid):
     Returns:
         (dict): RO definition in json
     """
-    query = dict(uid=uid)
-    idef = session.get(seeweb_search, params=query).json()
-    return idef
+    query = dict(uid=str(uid))
+    ro_def = session.get(seeweb_search, params=query).json()
+    return ro_def
 
 
 def get_by_name(session, ro_type, name):

@@ -2,7 +2,7 @@ import json
 
 from see_client import connect, get_by_name, get_ro_def, log_to_see, register_ro
 
-pth = "prov.wkf"
+pth = "../../../prov.wkf"
 container = "prov-oc"
 session = log_to_see("revesansparole", "r")
 
