@@ -190,12 +190,17 @@ def main():
     if not os.path.exists(root_pth):
         raise UserWarning("need a valid path")
 
-    # TODO more advanced managment of pkgname
-    pkgname = "openalea.%s" % os.path.basename(root_pth)
-
     session = log_to_see("revesansparole", "r")
 
     pm = oa_pm(root_pth)
+
+    pkgs = get_packages(pm)
+    print "pkgs", pkgs
+    if len(pkgs) == 1:
+        pkgname, = pkgs
+    else:
+        pkgname = "openalea.%s" % os.path.basename(root_pth)
+
     store = {}
     rois = extract_interfaces(session, pm, store)
     rons = extract_nodes(session, pm, store)
