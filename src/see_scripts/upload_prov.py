@@ -1,4 +1,5 @@
 import json
+import sys
 
 from see_client import connect, get_by_name, get_ro_def, log_to_see, register_ro
 
@@ -30,6 +31,16 @@ elif len(res) > 1:
     raise UserWarning("too many containers with this name")
 else:
     cid = res[0]
+
+# upload big data as separate Ros
+for i, ddata in enumerate(prov["data"]):
+    if sys.getsizeof(ddata['value']) > 1000:
+        # upload object as new data
+        ddata['type'] = "$ref"
+        name = "%s_%d" % (prov['name'], i)
+        did = register_ro(session, 'ro', dict(name=name))
+        ddata['value'] = did
+        connect(session, cid, did, 'contains')
 
 # upload prov on SEEweb
 pid = register_ro(session, 'workflow_prov', prov)
