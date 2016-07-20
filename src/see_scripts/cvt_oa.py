@@ -77,7 +77,7 @@ def export_node(session, nf, store):
     print("exporting node: %s %s" % (nf.package.name, nf.name))
     try:
         uid = nf.uid
-        if get_ro_def(session, uid) is not None:
+        if uid in store or get_ro_def(session, uid) is not None:
             print("RO with same uid '%s' already exists, DO nothing" % uid)
             return None
     except AttributeError:
