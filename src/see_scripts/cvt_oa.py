@@ -30,6 +30,9 @@ def oa_pm(root):
         (PackageManager)
     """
     pm = PackageManager()
+    if os.path.exists(os.path.join(root, "src")):
+        root = os.path.join(root, "src")
+
     pm.init(root, verbose=True)
 
     return pm
