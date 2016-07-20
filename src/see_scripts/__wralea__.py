@@ -15,21 +15,21 @@ __url__ = ''
 
 __all__ = []
 
-
-log = Factory(name="log_to_see",
-                   description="",
-                   category="",
-                   nodemodule="see_client",
-                   nodeclass="log_to_see",
-                   inputs=(dict(name="user", interface=IStr),
-                           dict(name="password", interface=IStr),),
-                   outputs=(dict(name="session", interface=None),),
-                   )
+log = Factory(uid="cbc464fd4e5011e6bff6d4bed973e64a",
+              name="log_to_see",
+              description="",
+              category="",
+              nodemodule="see_client",
+              nodeclass="log_to_see",
+              inputs=(dict(name="user", interface=IStr),
+                      dict(name="password", interface=IStr),),
+              outputs=(dict(name="session", interface=None),),
+              )
 
 __all__.append('log')
 
-
-load_def = Factory(name="load_def",
+load_def = Factory(uid="cbc464fc4e5011e6bff6d4bed973e64a",
+                   name="load_def",
                    description="",
                    category="",
                    nodemodule="see_client",

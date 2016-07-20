@@ -98,7 +98,11 @@ def register_ro(session, ro_type, ro_def):
     if res.status_code != 200:
         raise UserWarning("unable to register RO on SEEweb")
 
-    return res.json()
+    ans = res.json()
+    if ans["status"] != "success":
+        raise UserWarning(ans["msg"])
+
+    return ans["res"]
 
 
 def remove_ro(session, uid, recursive):
