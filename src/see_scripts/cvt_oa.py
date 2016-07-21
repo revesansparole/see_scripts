@@ -18,7 +18,7 @@ from openalea.wlformat.convert.wralea import (convert_data_node,
                                               register_interface)
 
 from .see_client import (connect, get_by_name, get_ro_def,
-                         log_to_see, register_ro)
+                         log_to_see, register_ro, remove_ro)
 
 
 def oa_pm(root):
@@ -68,25 +68,51 @@ def extract_interfaces(session, pm, store):
     return ros
 
 
-def export_node(session, nf, store):
+def check_fac(session, fac, store, overwrite):
+    """Do some checking on existence of RO in SEE database
+
+    Args:
+        session (Session): previously opened session with SEEweb
+        fac (Factory):
+        store (dict): previously defined objects
+        overwrite (bool): whether to overwrite RO already in database
+                          default False
+
+    Returns:
+        (bool): whether RO already exists that corresponds to this fac
+    """
+    try:
+        uid = fac.uid
+        if uid in store:
+            print("RO with same uid '%s' already exists, DO nothing" % uid)
+            return False
+        if get_ro_def(session, uid) is not None:
+            if overwrite:
+                remove_ro(session, uid, False)
+            else:
+                print("ROtoto with same uid '%s' already exists, DO nothing" % uid)
+                return False
+    except AttributeError:
+        pass
+
+    return True
+
+
+def export_node(session, nf, store, overwrite):
     """Convert a single node into a RO def.
 
     Args:
         session (Session): previously opened session with SEEweb
         nf (NodeFactory):
         store (dict): previously defined objects
+        overwrite (bool): whether to overwrite RO already in database
 
     Returns:
         (dict): RO def
     """
     print("exporting node: %s %s" % (nf.package.name, nf.name))
-    try:
-        uid = nf.uid
-        if uid in store or get_ro_def(session, uid) is not None:
-            print("RO with same uid '%s' already exists, DO nothing" % uid)
-            return None
-    except AttributeError:
-        pass
+    if not check_fac(session, nf, store, overwrite):
+        return None
 
     if nf.inputs is None:
         nf.inputs = []
@@ -139,25 +165,21 @@ def export_node(session, nf, store):
     return convert_node(nf, store, nf.package.name)
 
 
-def export_data(session, nf, store):
+def export_data(session, nf, store, overwrite):
     """Convert a single data node into a RO def.
 
     Args:
         session (Session): previously opened session with SEEweb
         nf (NodeFactory):
         store (dict): previously defined objects
+        overwrite (bool): whether to overwrite RO already in database
 
     Returns:
         (dict): RO def
     """
     print("exporting node: %s %s" % (nf.package.name, nf.name))
-    try:
-        uid = nf.uid
-        if uid in store or get_ro_def(session, uid) is not None:
-            print("RO with same uid '%s' already exists, DO nothing" % uid)
-            return None
-    except AttributeError:
-        pass
+    if not check_fac(session, nf, store, overwrite):
+        return None
 
     for iname in ("any", "IData"):
         idef = get_interface_by_name(store, iname)
@@ -179,7 +201,7 @@ def export_data(session, nf, store):
     return convert_data_node(nf, store, nf.package.name)
 
 
-def extract_nodes(session, pm, store):
+def extract_nodes(session, pm, store, overwrite=False):
     """Extract all workflow Nodes defined in pm
 
     Warnings: modify store in place
@@ -188,19 +210,21 @@ def extract_nodes(session, pm, store):
         session (Session): previously opened session with SEEweb
         pm (PackageManager):
         store (dict): previously defined objects
+        overwrite (bool): whether to overwrite RO already in database
+                          default False
 
     Returns:
         (list): a list of created ROWorkflowNode objects
     """
     ros = []
     for nf in nodes(pm):
-        ndef = export_node(session, nf, store)
+        ndef = export_node(session, nf, store, overwrite)
         if ndef is not None:
             store[ndef['id']] = ("node", ndef)
             ros.append(ndef)
 
     for nf in data(pm):
-        ndef = export_data(session, nf, store)
+        ndef = export_data(session, nf, store, overwrite)
         if ndef is not None:
             store[ndef['id']] = ("node", ndef)
             ros.append(ndef)
@@ -208,7 +232,7 @@ def extract_nodes(session, pm, store):
     for nf in composites(pm):
         if ((nf.inputs is not None and len(nf.inputs) > 0) or
                 (nf.outputs is not None and len(nf.outputs) > 0)):
-            ndef = export_node(session, nf, store)
+            ndef = export_node(session, nf, store, overwrite)
             if ndef is not None:
                 store[ndef['id']] = ("node", ndef)
                 ros.append(ndef)
@@ -216,25 +240,21 @@ def extract_nodes(session, pm, store):
     return ros
 
 
-def export_workflow(session, cnf, store):
+def export_workflow(session, cnf, store, overwrite):
     """Convert a single workflow to RO def
 
     Args:
         session (Session): previously opened session with SEEweb
         cnf (CompositeNodeFactory):
         store (dict): previously defined objects
+        overwrite (bool): whether to overwrite RO already in database
 
     Returns:
         (dict): RO def
     """
     print("exporting workflow: %s %s" % (cnf.package.name, cnf.name))
-    try:
-        uid = cnf.uid
-        if get_ro_def(session, uid) is not None:
-            print("RO with same uid '%s' already exists, DO nothing" % uid)
-            return None
-    except AttributeError:
-        pass
+    if not check_fac(session, cnf, store, overwrite):
+        return None
 
     # ensure all nodes used by this workflow are in store
     for nid, node_desc in cnf.elt_factory.items():
@@ -256,7 +276,7 @@ def export_workflow(session, cnf, store):
     return convert_workflow(cnf, store)
 
 
-def extract_workflows(session, pm, store):
+def extract_workflows(session, pm, store, overwrite=False):
     """Extract all workflows defined in pm
 
     Warnings: modify store in place
@@ -265,13 +285,15 @@ def extract_workflows(session, pm, store):
         session (Session): previously opened session with SEEweb
         pm (PackageManager):
         store (dict): previously defined objects
+        overwrite (bool): whether to overwrite RO already in database
+                          default False
 
     Returns:
         (list): a list of created ROWorkflow objects
     """
     ros = []
     for cnf in composites(pm):
-        wdef = export_workflow(session, cnf, store)
+        wdef = export_workflow(session, cnf, store, overwrite)
         if wdef is not None:
             store[wdef['id']] = ("workflow", wdef)
             ros.append(wdef)
@@ -287,13 +309,20 @@ def main():
     parser.add_argument('root_dir', nargs='?', default=".",
                         help="Root directory to look for wralea file")
 
-    parser.add_argument('-nw', metavar='no_workflow', dest='no_workflow', action='store_const',
+    parser.add_argument('-nw', metavar='no_workflow', dest='no_workflow',
+                        action='store_const',
                         const=False, default=True,
-                        help='convert eveyrthing except workflows')
+                        help='convert everything except workflows')
+
+    parser.add_argument('--overwrite', metavar='overwrite', dest='overwrite',
+                        action='store_const',
+                        const=True, default=False,
+                        help='overwrite nodes with same id in SEE')
 
     args = parser.parse_args()
     root_dir = args.root_dir
     cvt_workflow = args.no_workflow
+    overwrite = args.overwrite
 
     root_pth = os.path.normpath(os.path.abspath(root_dir))
     if not os.path.exists(root_pth):
@@ -315,9 +344,9 @@ def main():
 
     store = {}
     rois = extract_interfaces(session, pm, store)
-    rons = extract_nodes(session, pm, store)
+    rons = extract_nodes(session, pm, store, overwrite)
     if cvt_workflow:
-        rows = extract_workflows(session, pm, store)
+        rows = extract_workflows(session, pm, store, overwrite)
     else:
         rows = []
 
