@@ -2,17 +2,19 @@
 RO definition files for each Openalea workflow object encountered
 """
 
+from argparse import ArgumentParser
 from itertools import chain
 import os
 from sys import argv
 
 from openalea.core.interface import IInterface
-from openalea.core.pm_extend import composites, get_packages, nodes
+from openalea.core.pm_extend import composites, data, get_packages, nodes
 from openalea.core.pkgmanager import PackageManager
-from openalea.wlformat.convert.wralea import (convert_node,
+from openalea.wlformat.convert.wralea import (convert_data_node,
+                                              convert_node,
                                               convert_workflow,
                                               get_interface_by_name,
-                                              get_node_by_func_desc,
+                                              get_node_by_node_desc,
                                               register_interface)
 
 from .see_client import (connect, get_by_name, get_ro_def,
@@ -137,6 +139,46 @@ def export_node(session, nf, store):
     return convert_node(nf, store, nf.package.name)
 
 
+def export_data(session, nf, store):
+    """Convert a single data node into a RO def.
+
+    Args:
+        session (Session): previously opened session with SEEweb
+        nf (NodeFactory):
+        store (dict): previously defined objects
+
+    Returns:
+        (dict): RO def
+    """
+    print("exporting node: %s %s" % (nf.package.name, nf.name))
+    try:
+        uid = nf.uid
+        if uid in store or get_ro_def(session, uid) is not None:
+            print("RO with same uid '%s' already exists, DO nothing" % uid)
+            return None
+    except AttributeError:
+        pass
+
+    for iname in ("any", "IData"):
+        idef = get_interface_by_name(store, iname)
+        if idef is None:
+            # try to find its definition online
+            res = get_by_name(session, 'interface', iname)
+            if len(res) != 1:
+                msg = ("Interface '%s' "
+                       "used by node '%s:%s' "
+                       "is not defined anywhere" % (iname,
+                                                    nf.package.name,
+                                                    nf.name))
+                raise UserWarning(msg)
+            else:
+                idef = get_ro_def(session, res[0])
+                store[idef['id']] = ('data', idef)
+
+    # convert it to wlformat
+    return convert_data_node(nf, store, nf.package.name)
+
+
 def extract_nodes(session, pm, store):
     """Extract all workflow Nodes defined in pm
 
@@ -156,6 +198,20 @@ def extract_nodes(session, pm, store):
         if ndef is not None:
             store[ndef['id']] = ("node", ndef)
             ros.append(ndef)
+
+    for nf in data(pm):
+        ndef = export_data(session, nf, store)
+        if ndef is not None:
+            store[ndef['id']] = ("node", ndef)
+            ros.append(ndef)
+
+    for nf in composites(pm):
+        if ((nf.inputs is not None and len(nf.inputs) > 0) or
+                (nf.outputs is not None and len(nf.outputs) > 0)):
+            ndef = export_node(session, nf, store)
+            if ndef is not None:
+                store[ndef['id']] = ("node", ndef)
+                ros.append(ndef)
 
     return ros
 
@@ -181,11 +237,11 @@ def export_workflow(session, cnf, store):
         pass
 
     # ensure all nodes used by this workflow are in store
-    for nid, func_desc in cnf.elt_factory.items():
-        ndef = get_node_by_func_desc(store, func_desc)
+    for nid, node_desc in cnf.elt_factory.items():
+        ndef = get_node_by_node_desc(store, node_desc)
         if ndef is None:
             # try to find its definition online
-            nname = "%s: %s" % func_desc
+            nname = "%s: %s" % node_desc
             res = get_by_name(session, 'workflow_node', nname)
             if len(res) != 1:
                 msg = ("Node '%s' "
@@ -226,10 +282,18 @@ def extract_workflows(session, pm, store):
 def main():
     """Analyse arborescence content and extract all openalea objects
     """
-    if len(argv) > 1:
-        root_dir = argv[1]
-    else:
-        root_dir = "."
+    parser = ArgumentParser(description='Wralea converter')
+
+    parser.add_argument('root_dir', nargs='?', default=".",
+                        help="Root directory to look for wralea file")
+
+    parser.add_argument('-nw', metavar='no_workflow', dest='no_workflow', action='store_const',
+                        const=False, default=True,
+                        help='convert eveyrthing except workflows')
+
+    args = parser.parse_args()
+    root_dir = args.root_dir
+    cvt_workflow = args.no_workflow
 
     root_pth = os.path.normpath(os.path.abspath(root_dir))
     if not os.path.exists(root_pth):
@@ -243,16 +307,23 @@ def main():
     if len(pkgs) == 1:
         pkgname, = pkgs
     else:
-        pkgname = "openalea.%s" % os.path.basename(root_pth)
+        bname = os.path.basename(root_pth)
+        if bname == "caribu":
+            pkgname = "alinea.%s" % bname
+        else:
+            pkgname = "openalea.%s" % bname
 
     store = {}
     rois = extract_interfaces(session, pm, store)
     rons = extract_nodes(session, pm, store)
-    rows = extract_workflows(session, pm, store)
+    if cvt_workflow:
+        rows = extract_workflows(session, pm, store)
+    else:
+        rows = []
 
     # register container
     res = get_by_name(session, 'container', pkgname)
-    if len(res)  == 0:
+    if len(res) == 0:
         pid = register_ro(session, 'container', dict(name=pkgname))
     elif len(res) == 1:
         pid, = res
