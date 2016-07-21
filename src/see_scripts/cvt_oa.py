@@ -308,7 +308,7 @@ def main():
         pkgname, = pkgs
     else:
         bname = os.path.basename(root_pth)
-        if bname == "caribu":
+        if bname in ("adel", "caribu"):
             pkgname = "alinea.%s" % bname
         else:
             pkgname = "openalea.%s" % bname
