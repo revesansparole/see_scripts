@@ -34,9 +34,22 @@ load_def = Factory(uid="cbc464fc4e5011e6bff6d4bed973e64a",
                    category="",
                    nodemodule="see_client",
                    nodeclass="get_ro_def",
-                   inputs=(dict(name="session", interface=None),
-                           dict(name="uid", interface=IStr),),
+                   inputs=(dict(name="uid", interface=IStr),
+                           dict(name="session", interface=None),),
                    outputs=(dict(name="def", interface=IDict),),
                    )
 
 __all__.append('load_def')
+
+load_data = Factory(uid="7fbd67a4527711e6b255d4bed973e64a",
+                   name="load_data",
+                   description="",
+                   category="",
+                   nodemodule="see_client",
+                   nodeclass="get_ro_data",
+                   inputs=(dict(name="uid", interface=IStr),
+                           dict(name="session", interface=None),),
+                   outputs=(dict(name="val", interface=None),),
+                   )
+
+__all__.append('load_data')

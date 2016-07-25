@@ -46,6 +46,23 @@ def get_ro_def(session, uid):
     return ro_def
 
 
+def get_ro_data(session, uid):
+    """Fetch RO data value from SEEweb
+
+    Warnings: TODO
+
+    Args:
+        session (Session): an opened session
+        uid (str): unique id for this RO
+
+    Returns:
+        (None): Actual data value
+    """
+    query = dict(uid=str(uid))
+    ro_def = session.get(seeweb_search, params=query).json()
+    return ro_def
+
+
 def get_by_name(session, ro_type, name):
     """Fetch RO ids based on their name
 
@@ -163,5 +180,23 @@ def disconnect(session, src, tgt, link_type):
     res = session.post(seeweb_disconnect, data=data)
     if res.status_code != 200:
         raise UserWarning("unable to register RO on SEEweb")
+
+    return res.json()
+
+
+def search(session, query):
+    """Perform a query on SEE platform
+
+    Args:
+        session (Session): previously opened session with SEEweb
+        query (dict): parameters for query
+
+    Returns:
+        (list of id): list of id of RO matching the query
+    """
+    res = session.get(seeweb_search, params=query)
+
+    if res.status_code != 200:
+        raise UserWarning("unable to perform search RO on SEEweb")
 
     return res.json()
