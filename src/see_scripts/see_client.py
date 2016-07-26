@@ -4,12 +4,16 @@
 import json
 import requests
 
-seeweb_connect = "http://127.0.0.1:6543/rest/ro/connect"
-seeweb_disconnect = "http://127.0.0.1:6543/rest/ro/disconnect"
-seeweb_register = "http://127.0.0.1:6543/rest/ro/register"
-seeweb_remove = "http://127.0.0.1:6543/rest/ro/remove"
-seeweb_search = "http://127.0.0.1:6543/rest/ro/search"
-seeweb_upload = "http://127.0.0.1:6543/ro/create"
+# seeweb_root = "http://127.0.0.1:6543"
+seeweb_root = "http://194.214.86.135"
+
+seeweb_user_login = "%s/user_login" % seeweb_root
+seeweb_connect = "%s/rest/ro/connect" % seeweb_root
+seeweb_disconnect = "%s/rest/ro/disconnect" % seeweb_root
+seeweb_register = "%s/rest/ro/register" % seeweb_root
+seeweb_remove = "%s/rest/ro/remove" % seeweb_root
+seeweb_search = "%s/rest/ro/search" % seeweb_root
+seeweb_upload = "%s/ro/create" % seeweb_root
 
 
 def log_to_see(user, password):
@@ -24,7 +28,7 @@ def log_to_see(user, password):
     """
     session = requests.Session()
     auth = {'ok': True, 'user_id': user, 'password': password}
-    res = session.post("http://127.0.0.1:6543/user_login", data=auth)
+    res = session.post(seeweb_user_login, data=auth)
     if res.status_code != 200:
         raise UserWarning("unable to connect to SEEweb")
 
