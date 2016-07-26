@@ -5,7 +5,6 @@ RO definition files for each Openalea workflow object encountered
 from argparse import ArgumentParser
 from itertools import chain
 import os
-from sys import argv
 
 from openalea.core.interface import IInterface
 from openalea.core.pm_extend import composites, data, get_packages, nodes

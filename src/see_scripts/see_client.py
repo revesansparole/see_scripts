@@ -46,18 +46,22 @@ def get_ro_def(session, uid):
     return ro_def
 
 
-def get_ro_data(session, uid):
+def get_ro_data(uid, session=None):
     """Fetch RO data value from SEEweb
 
     Warnings: TODO
 
     Args:
-        session (Session): an opened session
         uid (str): unique id for this RO
+        session (Session): an opened session,
+                           default None for anonymous access
 
     Returns:
         (None): Actual data value
     """
+    if session is None:
+        session = requests.session()
+
     query = dict(uid=str(uid))
     ro_def = session.get(seeweb_search, params=query).json()
     return ro_def
@@ -77,6 +81,32 @@ def get_by_name(session, ro_type, name):
     query = dict(type=ro_type, name=name)
     res = session.get(seeweb_search, params=query).json()
     return res
+
+
+def get_single_by_name(session, ro_type, name):
+    """Fetch id of unique RO with given name
+
+    Raises: UserWarning if name is not unique
+            KeyError if name does not exists
+
+    Args:
+        session (Session): an opened session
+        ro_type (str): the type of RO to fetch
+        name (str): name associated with RO
+
+    Returns:
+        (str): id of RO
+    """
+    query = dict(type=ro_type, name=name)
+    res = session.get(seeweb_search, params=query).json()
+
+    if len(res) == 0:
+        raise KeyError("No Ro found with name '%s'" % name)
+
+    if len(res) > 1:
+        raise UserWarning("Too many ROs share name '%s'" % name)
+
+    return res[0]
 
 
 def upload_file(session, pth):
