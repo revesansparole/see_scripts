@@ -16,7 +16,7 @@ from openalea.wlformat.convert.wralea import (convert_data_node,
                                               get_node_by_node_desc,
                                               register_interface)
 
-from .see_client import (connect, get_by_name, get_ro_def,
+from .see_client import (connect, get_by_name, get_ro_def, get_single_by_name,
                          log_to_see, register_ro, remove_ro)
 
 
@@ -62,7 +62,7 @@ def extract_interfaces(session, pm, store):
                 if isinstance(ii, IInterface):
                     print("exporting interface: %s %s" % (pkgname, name))
                     idef = register_interface(store, name, "unknown")
-                    ros.append(idef)
+                    ros.append((pkgname, idef))
 
     return ros
 
@@ -89,7 +89,7 @@ def check_fac(session, fac, store, overwrite):
             if overwrite:
                 remove_ro(session, uid, False)
             else:
-                print("ROtoto with same uid '%s' already exists, DO nothing" % uid)
+                print("RO with same uid '%s' already exists, DO nothing" % uid)
                 return False
     except AttributeError:
         pass
@@ -220,13 +220,13 @@ def extract_nodes(session, pm, store, overwrite=False):
         ndef = export_node(session, nf, store, overwrite)
         if ndef is not None:
             store[ndef['id']] = ("node", ndef)
-            ros.append(ndef)
+            ros.append((nf.package.name, ndef))
 
     for nf in data(pm):
         ndef = export_data(session, nf, store, overwrite)
         if ndef is not None:
             store[ndef['id']] = ("node", ndef)
-            ros.append(ndef)
+            ros.append((nf.package.name, ndef))
 
     for nf in composites(pm):
         if ((nf.inputs is not None and len(nf.inputs) > 0) or
@@ -234,7 +234,7 @@ def extract_nodes(session, pm, store, overwrite=False):
             ndef = export_node(session, nf, store, overwrite)
             if ndef is not None:
                 store[ndef['id']] = ("node", ndef)
-                ros.append(ndef)
+                ros.append((nf.package.name, ndef))
 
     return ros
 
@@ -295,7 +295,7 @@ def extract_workflows(session, pm, store, overwrite=False):
         wdef = export_workflow(session, cnf, store, overwrite)
         if wdef is not None:
             store[wdef['id']] = ("workflow", wdef)
-            ros.append(wdef)
+            ros.append((cnf.package.name, wdef))
 
     return ros
 
@@ -332,14 +332,8 @@ def main():
     pm = oa_pm(root_pth)
 
     pkgs = get_packages(pm)
-    if len(pkgs) == 1:
-        pkgname, = pkgs
-    else:
-        bname = os.path.basename(root_pth)
-        if bname in ("adel", "caribu"):
-            pkgname = "alinea.%s" % bname
-        else:
-            pkgname = "openalea.%s" % bname
+    if len(pkgs) == 0:
+        return
 
     store = {}
     rois = extract_interfaces(session, pm, store)
@@ -350,28 +344,39 @@ def main():
         rows = []
 
     # register container
-    res = get_by_name(session, 'container', pkgname)
-    if len(res) == 0:
-        pid = register_ro(session, 'container', dict(name=pkgname))
-    elif len(res) == 1:
-        pid, = res
-    else:
-        raise UserWarning("already too many packages named '%s'" % pkgname)
+    pkg_cont = {}
+    for pkgname in pkgs:
+        top = None
+        for namespace in ('alinea', 'openalea', 'vplants'):
+            if namespace in pkgname:
+                try:
+                    top = get_single_by_name(session, 'container', namespace)
+                except KeyError:
+                    top = register_ro(session, 'container', dict(name=namespace))
+
+        try:
+            pid = get_single_by_name(session, 'container', pkgname)
+        except KeyError:
+            pid = register_ro(session, 'container', dict(name=pkgname))
+            if top is not None:
+                connect(session, top, pid, 'contains')
+        pkg_cont[pkgname] = pid
+
 
     # register interfaces
-    for idef in rois:
+    for pkgname, idef in rois:
         uid = register_ro(session, 'interface', idef)
-        connect(session, pid, uid, 'contains')
+        connect(session, pkg_cont[pkgname], uid, 'contains')
 
     # register nodes
-    for ndef in rons:
+    for pkgname, ndef in rons:
         uid = register_ro(session, 'workflow_node', ndef)
-        connect(session, pid, uid, 'contains')
+        connect(session, pkg_cont[pkgname], uid, 'contains')
 
     # register workflows
-    for wdef in rows:
+    for pkgname, wdef in rows:
         uid = register_ro(session, 'workflow', wdef)
-        connect(session, pid, uid, 'contains')
+        connect(session, pkg_cont[pkgname], uid, 'contains')
 
 
 if __name__ == '__main__':
