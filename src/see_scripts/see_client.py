@@ -4,8 +4,8 @@
 import json
 import requests
 
-# seeweb_root = "http://127.0.0.1:6543"
-seeweb_root = "http://194.214.86.135"
+seeweb_root = "http://127.0.0.1:6543"
+# seeweb_root = "http://194.214.86.135"
 
 seeweb_user_login = "%s/user_login" % seeweb_root
 seeweb_connect = "%s/rest/ro/connect" % seeweb_root
