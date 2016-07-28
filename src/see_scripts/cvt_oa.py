@@ -85,7 +85,7 @@ def check_fac(session, fac, store, overwrite):
         if uid in store:
             print("RO with same uid '%s' already exists, DO nothing" % uid)
             return False
-        if get_ro_def(session, uid) is not None:
+        if get_ro_def(uid, session) is not None:
             if overwrite:
                 remove_ro(session, uid, False)
             else:
@@ -148,7 +148,7 @@ def export_node(session, nf, store, overwrite):
         idef = get_interface_by_name(store, iname)
         if idef is None:
             # try to find its definition online
-            res = get_by_name(session, 'interface', iname)
+            res = get_by_name('interface', iname, session)
             if len(res) != 1:
                 msg = ("Interface '%s' "
                        "used by node '%s:%s' "
@@ -157,7 +157,7 @@ def export_node(session, nf, store, overwrite):
                                                     nf.name))
                 raise UserWarning(msg)
             else:
-                idef = get_ro_def(session, res[0])
+                idef = get_ro_def(res[0], session)
                 store[idef['id']] = ('data', idef)
 
     # convert it to wlformat
@@ -184,7 +184,7 @@ def export_data(session, nf, store, overwrite):
         idef = get_interface_by_name(store, iname)
         if idef is None:
             # try to find its definition online
-            res = get_by_name(session, 'interface', iname)
+            res = get_by_name('interface', iname, session)
             if len(res) != 1:
                 msg = ("Interface '%s' "
                        "used by node '%s:%s' "
@@ -193,7 +193,7 @@ def export_data(session, nf, store, overwrite):
                                                     nf.name))
                 raise UserWarning(msg)
             else:
-                idef = get_ro_def(session, res[0])
+                idef = get_ro_def(res[0], session)
                 store[idef['id']] = ('data', idef)
 
     # convert it to wlformat
@@ -261,14 +261,14 @@ def export_workflow(session, cnf, store, overwrite):
         if ndef is None:
             # try to find its definition online
             nname = "%s: %s" % node_desc
-            res = get_by_name(session, 'workflow_node', nname)
+            res = get_by_name('workflow_node', nname, session)
             if len(res) != 1:
                 msg = ("Node '%s' "
                        "used by workflow '%s' "
                        "is not defined anywhere" % (nname, cnf.name))
                 raise UserWarning(msg)
             else:
-                ndef = get_ro_def(session, res[0])
+                ndef = get_ro_def(res[0], session)
                 store[ndef['id']] = ('node', ndef)
 
     # import workflow
@@ -350,18 +350,18 @@ def main():
         for namespace in ('alinea', 'openalea', 'vplants'):
             if namespace in pkgname:
                 try:
-                    top = get_single_by_name(session, 'container', namespace)
+                    top = get_single_by_name('container', namespace, session)
                 except KeyError:
-                    top = register_ro(session, 'container', dict(name=namespace))
+                    top = register_ro(session, 'container',
+                                      dict(name=namespace))
 
         try:
-            pid = get_single_by_name(session, 'container', pkgname)
+            pid = get_single_by_name('container', pkgname, session)
         except KeyError:
             pid = register_ro(session, 'container', dict(name=pkgname))
             if top is not None:
                 connect(session, top, pid, 'contains')
         pkg_cont[pkgname] = pid
-
 
     # register interfaces
     for pkgname, idef in rois:

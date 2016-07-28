@@ -35,16 +35,20 @@ def log_to_see(user, password):
     return session
 
 
-def get_ro_def(session, uid):
+def get_ro_def(uid, session=None):
     """Fetch RO definition from SEEweb
 
     Args:
-        session (Session): an opened session
         uid (str): unique id for this RO
+        session (Session): an opened session
+                           default None for anonymous access
 
     Returns:
         (dict): RO definition in json
     """
+    if session is None:
+        session = requests.session()
+
     query = dict(uid=str(uid))
     ro_def = session.get(seeweb_search, params=query).json()
     return ro_def
@@ -71,36 +75,44 @@ def get_ro_data(uid, session=None):
     return ro_def
 
 
-def get_by_name(session, ro_type, name):
+def get_by_name(ro_type, name, session=None):
     """Fetch RO ids based on their name
 
     Args:
-        session (Session): an opened session
         ro_type (str): the type of RO to fetch
         name (str): name associated with RO
+        session (Session): an opened session,
+                           default None for anonymous access
 
     Returns:
         (list of str): list of RO ids whose name matches
     """
+    if session is None:
+        session = requests.session()
+
     query = dict(type=ro_type, name=name)
     res = session.get(seeweb_search, params=query).json()
     return res
 
 
-def get_single_by_name(session, ro_type, name):
+def get_single_by_name(ro_type, name, session=None):
     """Fetch id of unique RO with given name
 
     Raises: UserWarning if name is not unique
             KeyError if name does not exists
 
     Args:
-        session (Session): an opened session
         ro_type (str): the type of RO to fetch
         name (str): name associated with RO
+        session (Session): an opened session,
+                           default None for anonymous access
 
     Returns:
         (str): id of RO
     """
+    if session is None:
+        session = requests.session()
+
     query = dict(type=ro_type, name=name)
     res = session.get(seeweb_search, params=query).json()
 
@@ -111,6 +123,28 @@ def get_single_by_name(session, ro_type, name):
         raise UserWarning("Too many ROs share name '%s'" % name)
 
     return res[0]
+
+
+def search(query, session=None):
+    """Perform a query on SEE platform
+
+    Args:
+        query (dict): parameters for query
+        session (Session): an opened session,
+                           default None for anonymous access
+
+    Returns:
+        (list of id): list of id of RO matching the query
+    """
+    if session is None:
+        session = requests.session()
+
+    res = session.get(seeweb_search, params=query)
+
+    if res.status_code != 200:
+        raise UserWarning("unable to perform search RO on SEEweb")
+
+    return res.json()
 
 
 def upload_file(session, pth):
@@ -214,23 +248,5 @@ def disconnect(session, src, tgt, link_type):
     res = session.post(seeweb_disconnect, data=data)
     if res.status_code != 200:
         raise UserWarning("unable to register RO on SEEweb")
-
-    return res.json()
-
-
-def search(session, query):
-    """Perform a query on SEE platform
-
-    Args:
-        session (Session): previously opened session with SEEweb
-        query (dict): parameters for query
-
-    Returns:
-        (list of id): list of id of RO matching the query
-    """
-    res = session.get(seeweb_search, params=query)
-
-    if res.status_code != 200:
-        raise UserWarning("unable to perform search RO on SEEweb")
 
     return res.json()

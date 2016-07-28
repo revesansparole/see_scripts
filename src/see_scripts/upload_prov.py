@@ -13,7 +13,7 @@ with open(pth, 'r') as f:
 
 # check that associated workflow is already registered
 uid = prov['workflow']
-wdef = get_ro_def(session, uid)
+wdef = get_ro_def(uid, session)
 if wdef is None:
     raise UserWarning("The workflow associated to this provenance"
                       "has not been registered")
@@ -23,7 +23,7 @@ if wdef is None:
 # TODO
 
 # check existence of container
-res = get_by_name(session, 'container', container)
+res = get_by_name('container', container, session)
 if len(res) == 0:
     # create one
     cid = register_ro(session, 'container', dict(name=container))
