@@ -35,7 +35,7 @@
     "intended_versions": [
       "27"
     ],
-    "require": []
+    "require": [[null, "requests"]]
   }, 
   "test": {}, 
   "version": {

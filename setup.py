@@ -32,6 +32,7 @@ setup_kwds = dict(
     packages=find_packages('src'),
     package_dir={'': 'src'},
     install_requires=[
+        "requests",
         ],
     tests_require=[
         "mock",
