@@ -2,6 +2,7 @@
 """
 
 import json
+import os
 import requests
 
 seeweb_root = "http://127.0.0.1:6543"
@@ -33,6 +34,23 @@ def log_to_see(user, password):
         raise UserWarning("unable to connect to SEEweb")
 
     return session
+
+
+def log_to_see_environ():
+    """Attempt to log to SEEweb platform using
+    credentials stored in environment variables.
+
+    Notes: needs SEE_user and SEE_pwd to be defined
+
+    Returns:
+        (Session): opened session if successful or None
+    """
+    user = os.environ["SEE_user"]
+    pwd = os.environ["SEE_pwd"]
+    try:
+        return log_to_see(user, pwd)
+    except UserWarning:
+        return None
 
 
 def get_ro_def(uid, session=None):
@@ -72,7 +90,7 @@ def get_ro_data(uid, session=None):
 
     query = dict(uid=str(uid))
     ro_def = session.get(seeweb_search, params=query).json()
-    return ro_def
+    return ro_def.get('value')
 
 
 def get_by_name(ro_type, name, session=None):

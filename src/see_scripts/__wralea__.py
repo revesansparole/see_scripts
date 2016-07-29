@@ -20,9 +20,8 @@ log = Factory(uid="cbc464fd4e5011e6bff6d4bed973e64a",
               description="",
               category="",
               nodemodule="see_client",
-              nodeclass="log_to_see",
-              inputs=(dict(name="user", interface=IStr),
-                      dict(name="password", interface=IStr),),
+              nodeclass="log_to_see_environ",
+              inputs=(),
               outputs=(dict(name="session", interface=None),),
               )
 
