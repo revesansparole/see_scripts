@@ -171,15 +171,12 @@ def upload_prov(session, pdef, cid=None, overwrite=False):
             if port['data'] is not None:
                 input_data.add(port['data'])
 
-    input_ref = set()
     for did in input_data:
         ddata = get_data_def(pdef, did)
         if ddata['type'] == 'ref':
             if get_ro_def(ddata['value'], session) is None:
                 raise UserWarning("data '%s' used as input is not registered "
                                   "on SEE" % ddata['value'])
-            else:
-                input_ref.add(ddata['value'])
 
     # upload output data as separate ROs
     output_data = set()
@@ -190,24 +187,23 @@ def upload_prov(session, pdef, cid=None, overwrite=False):
 
     for i, did in enumerate(output_data):
         ddef = get_data_def(pdef, did)
-        # upload object as new data
-        rdef = dict(ddef)
-        rdef['name'] = "%s_%d" % (pdef['name'], i)
-        did = register_ro(session, 'ro', rdef)
-        ddef['type'] = "ref"
-        ddef['value'] = did
-        if cid is not None:
-            connect(session, cid, did, 'contains')
+        if ddef['type'] == 'ref':
+            # check that RO already exists on SEE
+            if get_ro_def(ddef['value'], session) is None:
+                raise UserWarning("data '%s' produced on output is not "
+                                  "registered on SEE" % ddef['value'])
+        else:
+            # upload object as new data
+            rdef = dict(ddef)
+            rdef['name'] = "%s_%d" % (pdef['name'], i)
+            did = register_ro(session, 'ro', rdef)
+            ddef['type'] = "ref"
+            ddef['value'] = did
+            if cid is not None:
+                connect(session, cid, did, 'contains')
 
     # register provenance
     uid = register_ro(session, 'workflow_prov', pdef)
-    # connect prov to data created
-    # TODO move it SEE
-    for did in input_ref:
-        connect(session, uid, did, 'consume')
-
-    for did in output_data:
-        connect(session, uid, did, 'produce')
 
     if cid is not None:
         connect(session, cid, uid, 'contains')
