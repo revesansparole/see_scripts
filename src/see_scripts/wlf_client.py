@@ -118,10 +118,10 @@ def upload_workflow(session, wdef, cid=None, overwrite=False):
 
     # check that all nodes used by this workflow are already registered
     # on the platform
-    for nid in wdef['nodes']:
-        if get_ro_def(nid, session) is None:
+    for node in wdef['nodes']:
+        if get_ro_def(node['id'], session) is None:
             raise UserWarning("node '%s' used by workflow is "
-                              "not registered" % nid)
+                              "not registered" % node['id'])
 
     # register workflow
     uid = register_ro(session, 'workflow', wdef)
