@@ -1,6 +1,7 @@
 """Set of python functions to interact with the SEEweb platform.
 """
 
+from base64 import b64encode
 import json
 import os
 import requests
@@ -194,8 +195,12 @@ def register_ro(session, ro_type, ro_def):
     Returns:
         (str): id of registered RO
     """
+    loc_def = dict(ro_def)
+    if 'value' in loc_def:
+        loc_def['value'] = b64encode(loc_def['value'])
+
     data = dict(ro_type=ro_type,
-                ro_def=json.dumps(ro_def))
+                ro_def=json.dumps(loc_def))
 
     res = session.post(seeweb_register, data=data)
     if res.status_code != 200:
