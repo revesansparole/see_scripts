@@ -355,6 +355,13 @@ def main():
                     top = register_ro(session, 'container',
                                       dict(name=namespace))
 
+        # default to openalea namespace
+        if top is None:
+            try:
+                top = get_single_by_name('container', "openalea", session)
+            except KeyError:
+                top = register_ro(session, 'container', dict(name="openalea"))
+
         try:
             pid = get_single_by_name('container', pkgname, session)
         except KeyError:
