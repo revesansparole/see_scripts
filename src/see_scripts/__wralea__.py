@@ -4,7 +4,7 @@
 from openalea.core import Factory
 from openalea.core.interface import *
 
-__name__ = "see"
+__name__ = "openalea.see"
 __alias__ = []
 __version__ = '0.0.3'
 __license__ = "Cecill-C"
