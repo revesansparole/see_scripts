@@ -142,6 +142,15 @@ def get_data_def(pdef, did):
     raise KeyError("no data recorded with this id")
 
 
+def is_used_as_input(pdef, did):
+    for pexec in pdef['executions']:
+        for port in pexec['inputs']:
+            if port['data'] == did:
+                return True
+
+    return False
+
+
 def upload_prov(session, pdef, cid=None, overwrite=False):
     """Upload a given execution provenance to SEE
 
@@ -181,11 +190,14 @@ def upload_prov(session, pdef, cid=None, overwrite=False):
                                   "on SEE" % ddata['value'])
 
     # upload output data as separate ROs
+    # if output port is not connected
+    # i.e. export final outputs
     output_data = set()
     for pexec in pdef["executions"]:
         for port in pexec['outputs']:
-            if port['data'] is not None:
-                output_data.add(port['data'])
+            did = port['data']
+            if did is not None and not is_used_as_input(pdef, did):
+                output_data.add(did)
 
     for i, did in enumerate(output_data):
         ddef = get_data_def(pdef, did)
