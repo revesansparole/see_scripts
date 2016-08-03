@@ -3,7 +3,9 @@ in openalea.wlformat, to SEE platform.
 """
 from itertools import chain
 
-from .see_client import connect, get_ro_def, register_ro, remove_ro
+from .see_client import (connect, get_ro_def,
+                         register_data, register_ro,
+                         remove_ro)
 
 
 def already_registered(session, ro_def, overwrite):
@@ -194,9 +196,12 @@ def upload_prov(session, pdef, cid=None, overwrite=False):
                                   "registered on SEE" % ddef['value'])
         else:
             # upload object as new data
-            rdef = dict(ddef)
-            rdef['name'] = "%s_%d" % (pdef['name'], i)
-            did = register_ro(session, 'ro', rdef)
+            name = "%s_%d" % (pdef['name'], i)
+            interface = ddef['type']
+            value = ddef['value']
+            did = register_data(session,
+                                interface,
+                                dict(name=name, value=value))
             ddef['type'] = "ref"
             ddef['value'] = did
             if cid is not None:

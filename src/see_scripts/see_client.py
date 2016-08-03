@@ -183,6 +183,36 @@ def upload_file(session, pth):
         raise UserWarning("unable to upload package on SEEweb")
 
 
+def register_data(session, interface, ro_def):
+    """Register a new RO data on the platform.
+
+    Args:
+        session (Session): previously opened session with SEEweb
+        interface (str): interface name, aka data type
+        ro_def (dict): json def of RO
+
+    Returns:
+        (str): id of registered RO
+    """
+    # try to localize interface uid
+    iid = get_single_by_name('interface', interface, session)
+
+    loc_def = dict(ro_def)
+
+    data = dict(interface=iid,
+                ro_def=json.dumps(loc_def))
+
+    res = session.post(seeweb_register, data=data)
+    if res.status_code != 200:
+        raise UserWarning("unable to register RO on SEEweb")
+
+    ans = res.json()
+    if ans["status"] != "success":
+        raise UserWarning(ans["msg"])
+
+    return ans["res"]
+
+
 def register_ro(session, ro_type, ro_def):
     """Register a new RO on the platform.
 
