@@ -331,7 +331,7 @@ def main():
 
     pm = oa_pm(root_pth)
 
-    pkgs = get_packages(pm)
+    pkgs = [pm[name] for name in get_packages(pm)]
     if len(pkgs) == 0:
         return
 
@@ -345,10 +345,10 @@ def main():
 
     # register container
     pkg_cont = {}
-    for pkgname in pkgs:
+    for pkg in pkgs:
         top = None
         for namespace in ('alinea', 'openalea', 'vplants'):
-            if namespace in pkgname:
+            if namespace in pkg.name:
                 try:
                     top = get_single_by_name('container', namespace, session)
                 except KeyError:
@@ -363,12 +363,12 @@ def main():
         #         top = register_ro(session, 'container', dict(name="openalea"))
 
         try:
-            pid = get_single_by_name('container', pkgname, session)
+            pid = get_single_by_name('container', pkg.name, session)
         except KeyError:
-            pid = register_ro(session, 'container', dict(name=pkgname))
+            pid = register_ro(session, 'container', dict(name=pkg.name, description=pkg.get_metainfo('description')))
             if top is not None:
                 connect(session, top, pid, 'contains')
-        pkg_cont[pkgname] = pid
+        pkg_cont[pkg.name] = pid
 
     # register interfaces
     for pkgname, idef in rois:
